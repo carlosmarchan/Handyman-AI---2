@@ -243,7 +243,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
           const childrenToText = (children: React.ReactNode): string => {
               return React.Children.toArray(children).reduce((text: string, child: React.ReactNode): string => {
                   if (typeof child === 'string' || typeof child === 'number') {
-                      // Fix: Explicitly convert child to a string to handle number types and satisfy TypeScript's type checker for the reduce callback.
+                      // FIX: Explicitly convert child to a string to handle number types and satisfy TypeScript's type checker for the reduce callback.
                       return text + String(child);
                   }
                   if (React.isValidElement(child) && child.props && typeof child.props === 'object' && 'children' in child.props) {

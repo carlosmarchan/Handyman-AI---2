@@ -71,13 +71,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     <div className="bg-slate-50">
         {/* Hero Section */}
         <div className="text-center px-6 py-16 md:py-24 bg-white">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-800 tracking-tight">
+            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
+                Handy<span className="text-blue-600">AI</span>
+            </h2>
+            <h1 className="mt-4 text-4xl md:text-6xl font-extrabold text-slate-800 tracking-tight">
                 Your Work is <span className="text-blue-600">Professional.</span>
                 <br />
                 Your Reports Should Be Too.
             </h1>
             <p className="mt-6 max-w-2xl mx-auto text-lg text-slate-600">
-                Impress clients, justify your costs, and get paid faster with stunning, AI-generated reports. HandyAI is the ultimate tool for the modern technician who's serious about growth.
+                Impress clients, justify your costs, and get paid faster with stunning, AI-generated reports. <span className="font-semibold">Handy<span className="text-blue-600">AI</span></span> is the ultimate tool for the modern technician who's serious about growth.
             </p>
             <button
                 onClick={onStart}
