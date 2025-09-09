@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, ImageFile } from '../types';
-import { refineReport, initializeChat, getReportSuggestionAfterAnnotation } from '../services/geminiService';
+import { refineReport, initializeChat, getReportSuggestionAfterAnnotation, getPromptSuggestions } from '../services/geminiService';
 import Loader from './Loader';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { MicrophoneIcon } from './icons/MicrophoneIcon';
@@ -50,6 +50,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
   const [editingImage, setEditingImage] = useState<ImageFile | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isGettingSuggestion, setIsGettingSuggestion] = useState<boolean>(false);
+  const [promptPills, setPromptPills] = useState<string[]>([]);
+  const [isGettingPills, setIsGettingPills] = useState<boolean>(false);
   const [showAddPhotos, setShowAddPhotos] = useState(false);
   const [highlightedText, setHighlightedText] = useState<string | null>(null);
   const chatSessionRef = useRef<Chat | null>(null);
@@ -117,6 +119,26 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
   const aiMessages = chatHistory.filter(m => m.author === 'ai');
   const userMessages = chatHistory.filter(m => m.author === 'user');
   const latestReport = aiMessages.length > 0 ? aiMessages[aiMessages.length - 1].content : '';
+  
+  // Fetch prompt suggestions when the report changes or after refining is done
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (latestReport && !isRefining) {
+        setIsGettingPills(true);
+        setPromptPills([]);
+        try {
+          const suggestions = await getPromptSuggestions(latestReport);
+          setPromptPills(suggestions);
+        } catch (e) {
+          console.error("Failed to get prompt suggestions", e);
+          setPromptPills([]);
+        } finally {
+          setIsGettingPills(false);
+        }
+      }
+    };
+    fetchSuggestions();
+  }, [latestReport, isRefining]);
 
   const submitPrompt = async (prompt: string) => {
     if (!prompt.trim() || !chatSessionRef.current) return;
@@ -129,6 +151,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
     setChatHistory(prev => [...prev, newUserMessage]);
     setIsRefining(true);
     setAiSuggestion(null); // Clear suggestion once it's used or a new prompt is sent
+    setPromptPills([]); // Clear pills while refining
 
     try {
       const refinedContent = await refineReport(chatSessionRef.current, prompt);
@@ -209,7 +232,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
   }
 
   const customRenderers = {
-      p: (props: any) => {
+      // FIX: Destructure non-standard props `node` and `inline` to avoid passing them to the DOM element.
+      // This prevents potential React warnings and resolves a TypeScript type inference issue.
+      p: ({ node, inline, ...props }: any) => {
           // Do not highlight if there's nothing to highlight, or if it has already been applied in this render pass.
           if (!highlightedText || highlightAppliedRef.current) {
               return <p {...props} />;
@@ -266,7 +291,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
               <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mt-1">AI</div>
                   <div className="p-4 rounded-lg bg-white shadow-sm flex-1">
-                      {/* FIX: Pass markdown content as a child to ReactMarkdown to resolve type error. */}
                       <ReactMarkdown
                           className="prose prose-slate max-w-none"
                           remarkPlugins={[remarkGfm]}
@@ -394,6 +418,29 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
                       <ArrowRightIcon />
                   </button>
               </div>
+
+               {/* Dynamic Prompt Pills */}
+               <div className="mt-3 min-h-[28px]">
+                {isGettingPills ? (
+                    <div className="text-xs text-slate-400 text-center py-1">Generating suggestions...</div>
+                ) : (
+                    promptPills.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 animate-[fadeIn_0.5s_ease-in-out]">
+                            {promptPills.map((suggestion, index) => (
+                                <button
+                                key={index}
+                                onClick={() => submitPrompt(suggestion)}
+                                disabled={isRefining}
+                                className="px-3 py-1 text-sm text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                {suggestion}
+                                </button>
+                            ))}
+                        </div>
+                    )
+                )}
+               </div>
+
           </div>
       </div>
     </>

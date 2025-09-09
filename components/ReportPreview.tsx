@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ImageFile } from '../types';
 import ReactMarkdown from 'https://esm.sh/react-markdown@9';
@@ -139,7 +138,7 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, o
         {images.length > 0 && (
           <section className="mt-12 pt-8 border-t border-slate-200">
             <h3 className="text-2xl font-semibold text-slate-700 mb-6">Supporting Photos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
+            <div className="grid grid-cols-1 gap-6 break-inside-avoid">
               {images.map(image => (
                 <div key={image.id} className="rounded-lg overflow-hidden border border-slate-200 break-inside-avoid mb-6">
                   <img src={image.annotatedSrc || image.src} alt="Evidence of work completed" className="w-full h-auto object-cover" />

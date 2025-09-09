@@ -1,4 +1,5 @@
-import { GoogleGenAI, GenerateContentResponse, Chat, Modality } from "@google/genai";
+
+import { GoogleGenAI, GenerateContentResponse, Chat, Modality, Type } from "@google/genai";
 import { ImageFile } from "../types";
 
 if (!process.env.API_KEY) {
@@ -166,5 +167,55 @@ export async function getReportSuggestionAfterAnnotation(chatSession: Chat, anno
     } catch (error) {
         console.error("Error getting report suggestion:", error);
         throw new Error("The AI failed to provide a suggestion.");
+    }
+}
+
+export async function getPromptSuggestions(report: string): Promise<string[]> {
+    const prompt = `Analyze the following handyman's work report. Your goal is to provide 3 concise, actionable suggestions to improve it. Phrase them as commands for an AI assistant.
+
+    **CRITICAL RULE:** If the report discusses services performed but lacks an itemized cost breakdown, one suggestion MUST be 'Add a table with itemized costs and suggested prices'. Do not suggest this if a cost table is already present.
+    
+    Other good suggestions involve adding detail, improving structure, or clarifying information for the client.
+    
+    Report to analyze:
+    ---
+    ${report}
+    ---
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        suggestions: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.STRING,
+                                description: "An actionable suggestion to improve the report."
+                            }
+                        }
+                    },
+                    required: ["suggestions"]
+                }
+            }
+        });
+        
+        const jsonStr = response.text.trim();
+        const result = JSON.parse(jsonStr);
+        
+        if (result && Array.isArray(result.suggestions)) {
+            return result.suggestions.slice(0, 3);
+        }
+
+        return [];
+
+    } catch (error) {
+        console.error("Error getting prompt suggestions:", error);
+        return []; // Return empty array on failure
     }
 }
