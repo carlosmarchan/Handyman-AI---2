@@ -232,8 +232,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
   }
 
   const customRenderers = {
-      // FIX: The original `p` renderer had multiple issues: it used `any` for props which caused type errors,
-      // passed invalid props to the DOM, and failed to render its children. This implementation fixes those issues.
       p: (props: { node?: any; inline?: boolean; children?: React.ReactNode;[key: string]: any; }) => {
           const { node, inline, children, ...rest } = props;
           // Do not highlight if there's nothing to highlight, or if it has already been applied in this render pass.
@@ -243,12 +241,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
           
           // Helper to recursively get all text from children nodes
           const childrenToText = (children: React.ReactNode): string => {
-              // FIX: This function was updated to correctly handle number types and to add stronger type
-              // checking for child props to prevent runtime errors when traversing the React node tree.
               return React.Children.toArray(children).reduce((text: string, child: React.ReactNode): string => {
                   if (typeof child === 'string' || typeof child === 'number') {
-                      // FIX: Explicitly convert child to string to resolve TypeScript error where `string + number`
-                      // was not being correctly inferred as a string type in this context.
+                      // Fix: Explicitly convert child to a string to handle number types and satisfy TypeScript's type checker for the reduce callback.
                       return text + String(child);
                   }
                   if (React.isValidElement(child) && child.props && typeof child.props === 'object' && 'children' in child.props) {

@@ -8,9 +8,10 @@ import ReportGenerator from './components/ReportGenerator';
 import { generateInitialReport } from './services/geminiService';
 import { ArrowRightIcon } from './components/icons/ArrowRightIcon';
 import ReportPreview from './components/ReportPreview';
+import LandingPage from './components/LandingPage';
 
 const App: React.FC = () => {
-  const [stage, setStage] = useState<AppStage>(AppStage.CAPTURE);
+  const [stage, setStage] = useState<AppStage>(AppStage.LANDING);
   const [images, setImages] = useState<ImageFile[]>([]);
   const [dictatedText, setDictatedText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,10 @@ const App: React.FC = () => {
     setReport('');
     setChatHistory([]);
   };
+  
+  const handleStartApp = () => {
+    setStage(AppStage.CAPTURE);
+  };
 
   const handleGoToPreview = () => {
     setStage(AppStage.PREVIEW);
@@ -75,6 +80,8 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (stage) {
+      case AppStage.LANDING:
+        return <LandingPage onStart={handleStartApp} />;
       case AppStage.CAPTURE:
         return (
           <div className="space-y-8">
@@ -131,31 +138,38 @@ const App: React.FC = () => {
     }
   };
 
+  const isLanding = stage === AppStage.LANDING;
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <header className="bg-white shadow-md sticky top-0 z-10 print-hidden">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-700">
-            Handy<span className="text-blue-600">AI</span> Report
-          </h1>
-          {(stage === AppStage.REFINE || stage === AppStage.PREVIEW) && (
-            <button
-              onClick={resetApp}
-              className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
-            >
-              Start New Report
-            </button>
-          )}
-        </div>
-      </header>
+      {!isLanding && (
+        <header className="bg-white shadow-md sticky top-0 z-10 print-hidden">
+          <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-700">
+              Handy<span className="text-blue-600">AI</span> Report
+            </h1>
+            {(stage === AppStage.REFINE || stage === AppStage.PREVIEW) && (
+              <button
+                onClick={resetApp}
+                className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+              >
+                Start New Report
+              </button>
+            )}
+          </div>
+        </header>
+      )}
 
-      <main className="container mx-auto p-4 md:p-6">
+      <main className={!isLanding ? "container mx-auto p-4 md:p-6" : ""}>
         {renderContent()}
       </main>
+      
+      {!isLanding && (
+         <footer className="text-center p-4 text-sm text-slate-400 print-hidden">
+          <p>&copy; {new Date().getFullYear()} HandyAI Report. All rights reserved.</p>
+        </footer>
+      )}
 
-       <footer className="text-center p-4 text-sm text-slate-400 print-hidden">
-        <p>&copy; {new Date().getFullYear()} HandyAI Report. All rights reserved.</p>
-      </footer>
     </div>
   );
 };

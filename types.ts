@@ -1,4 +1,5 @@
 export enum AppStage {
+  LANDING = 'LANDING',
   CAPTURE = 'CAPTURE',
   GENERATING = 'GENERATING',
   REFINE = 'REFINE',
