@@ -1,11 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ImageFile } from '../types';
 import ReactMarkdown from 'https://esm.sh/react-markdown@9';
 import remarkGfm from 'https://esm.sh/remark-gfm@4';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
-import { PrintIcon } from './icons/PrintIcon';
-
+import { SaveIcon } from './icons/SaveIcon';
+import Loader from './Loader';
 
 interface ReportPreviewProps {
   reportMarkdown: string;
@@ -13,8 +13,74 @@ interface ReportPreviewProps {
   onBackToRefine: () => void;
 }
 
+// Declare global vars for libraries loaded via script tags
+declare const html2canvas: any;
+declare const jspdf: any;
+
 const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, onBackToRefine }) => {
-  const handlePrint = () => window.print();
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleSaveAsPdf = async () => {
+    const reportElement = document.getElementById('report-content');
+    if (!reportElement) {
+      console.error("Report content element not found!");
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const canvas = await html2canvas(reportElement, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+        backgroundColor: '#ffffff', // Ensure background is white for the capture
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = jspdf;
+      
+      // A4 page in points (pt)
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'pt',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      // Calculate image's height on the PDF while maintaining aspect ratio
+      const ratio = canvasWidth / pdfWidth;
+      const imgHeightOnPdf = canvasHeight / ratio;
+
+      let heightLeft = imgHeightOnPdf;
+      let position = 0;
+
+      // Add the first page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightOnPdf);
+      heightLeft -= pdfHeight;
+
+      // Add new pages if content is taller than one page
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightOnPdf);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save('HandyAI-Report.pdf');
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      // Optionally, show an error message to the user here
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
 
   return (
     <div className="bg-white rounded-lg shadow-xl overflow-hidden">
@@ -33,11 +99,21 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, o
             <span>Back to Editor</span>
           </button>
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            onClick={handleSaveAsPdf}
+            disabled={isGeneratingPdf}
+            className="flex items-center justify-center gap-2 w-40 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-wait"
           >
-            <PrintIcon />
-            <span>Print / Save as PDF</span>
+            {isGeneratingPdf ? (
+                <>
+                    <Loader />
+                    <span>Generating...</span>
+                </>
+            ) : (
+                <>
+                    <SaveIcon />
+                    <span>Save as PDF</span>
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -66,7 +142,7 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, o
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
               {images.map(image => (
                 <div key={image.id} className="rounded-lg overflow-hidden border border-slate-200 break-inside-avoid mb-6">
-                  <img src={image.src} alt="Evidence of work completed" className="w-full h-auto object-cover" />
+                  <img src={image.annotatedSrc || image.src} alt="Evidence of work completed" className="w-full h-auto object-cover" />
                   {/* Placeholder for future caption functionality */}
                 </div>
               ))}

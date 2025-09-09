@@ -10,6 +10,9 @@ export interface ImageFile {
   src: string; // base64 data URL
   mimeType: string;
   selected: boolean;
+  isAnnotated?: boolean;
+  annotatedSrc?: string;
+  annotationPrompt?: string;
 }
 
 export interface ChatMessage {

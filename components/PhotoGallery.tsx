@@ -3,18 +3,23 @@ import React, { useState, useCallback } from 'react';
 import { ImageFile } from '../types';
 import { CheckIcon } from './icons/CheckIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { MagicWandIcon } from './icons/MagicWandIcon';
+import { PencilIcon } from './icons/PencilIcon';
 
 interface PhotoGalleryProps {
   images: ImageFile[];
   setImages: (images: ImageFile[]) => void;
   layout?: 'grid' | 'row';
   display?: 'all' | 'selectedOnly';
+  onAnnotateClick?: (image: ImageFile) => void;
+  isReadOnly?: boolean;
 }
 
-const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout = 'grid', display = 'all' }) => {
+const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout = 'grid', display = 'all', onAnnotateClick, isReadOnly = false }) => {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const toggleSelect = (id: string) => {
+    if (isReadOnly) return;
     setImages(
       images.map(image =>
         image.id === id ? { ...image, selected: !image.selected } : image
@@ -23,21 +28,24 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
   };
 
   const deleteImage = (id: string) => {
+    // Deletion is allowed even in "read-only" mode (which prevents re-ordering and de-selection)
     setImages(images.filter(image => image.id !== id));
   };
   
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+    if (isReadOnly) return;
     setDraggedItemId(id);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isReadOnly) return;
     e.preventDefault();
   };
   
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>, dropId: string) => {
     e.preventDefault();
-    if (draggedItemId === null || draggedItemId === dropId) {
+    if (isReadOnly || draggedItemId === null || draggedItemId === dropId) {
         setDraggedItemId(null);
         return;
     };
@@ -52,7 +60,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
         setImages(updatedImages);
     }
     setDraggedItemId(null);
-  }, [draggedItemId, images, setImages]);
+  }, [draggedItemId, images, setImages, isReadOnly]);
 
 
   const imagesToRender = display === 'selectedOnly' ? images.filter(img => img.selected) : images;
@@ -69,32 +77,52 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
   const imageElements = imagesToRender.map(image => (
       <div
         key={image.id}
-        draggable
+        draggable={!isReadOnly}
         onDragStart={(e) => handleDragStart(e, image.id)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, image.id)}
-        className={`relative group aspect-square rounded-lg overflow-hidden cursor-pointer transition-transform transform-gpu ${draggedItemId === image.id ? 'scale-95 opacity-50' : 'hover:scale-105'} ${layout === 'row' ? 'h-20 w-20 flex-shrink-0' : ''}`}
-        onClick={() => toggleSelect(image.id)}
+        className={`relative group aspect-square rounded-lg overflow-hidden transition-transform transform-gpu ${isReadOnly ? 'cursor-default' : 'cursor-pointer'} ${draggedItemId === image.id ? 'scale-95 opacity-50' : 'hover:scale-105'} ${layout === 'row' ? 'h-20 w-20 flex-shrink-0' : ''}`}
       >
-        <img src={image.src} alt="Captured work" className="w-full h-full object-cover" />
-        <div className={`absolute inset-0 bg-black transition-opacity ${image.selected ? 'opacity-20' : 'opacity-60'}`}></div>
+        <img src={image.annotatedSrc || image.src} alt="Captured work" className="w-full h-full object-cover" onClick={() => onAnnotateClick ? onAnnotateClick(image) : toggleSelect(image.id)} />
+        <div className={`absolute inset-0 bg-black transition-opacity pointer-events-none ${image.selected ? 'opacity-20' : 'opacity-60'}`}></div>
         
-        {image.selected && (
-          <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white border-2 border-white">
+        {/* Selection Checkmark */}
+        <div 
+            className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white transition-all ${image.selected ? 'bg-blue-600 text-white' : 'bg-white/30 text-transparent'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                toggleSelect(image.id)
+            }}
+        >
             <CheckIcon />
-          </div>
-        )}
+        </div>
         
+        {/* Delete button */}
         <button
             onClick={(e) => {
-                e.stopPropagation(); // prevent toggleSelect
+                e.stopPropagation();
                 deleteImage(image.id);
             }}
-            className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute bottom-1.5 right-1.5 w-6 h-6 bg-red-600/80 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"
             aria-label="Delete image"
         >
             <TrashIcon />
         </button>
+
+        {/* Annotation Button */}
+        {onAnnotateClick && (
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onAnnotateClick(image);
+                }}
+                className="absolute top-1.5 right-1.5 w-6 h-6 bg-purple-600/80 rounded-full flex items-center justify-center text-white hover:bg-purple-600 transition-all"
+                aria-label={image.isAnnotated ? "Edit annotation" : "Annotate image"}
+                title={image.isAnnotated ? "Edit annotation" : "Annotate image"}
+            >
+                {image.isAnnotated ? <PencilIcon /> : <MagicWandIcon />}
+            </button>
+        )}
       </div>
   ));
 

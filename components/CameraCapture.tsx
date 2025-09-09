@@ -67,6 +67,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ images, onImagesChange })
           src: dataUrl,
           mimeType: 'image/jpeg',
           selected: true,
+          isAnnotated: false,
         };
         onImagesChange([...images, newImage]);
       }
@@ -87,6 +88,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ images, onImagesChange })
               src: event.target.result as string,
               mimeType: file.type,
               selected: true,
+              isAnnotated: false,
             };
             resolve(newImage);
           } else {
