@@ -8,9 +8,10 @@ interface PhotoGalleryProps {
   images: ImageFile[];
   setImages: (images: ImageFile[]) => void;
   layout?: 'grid' | 'row';
+  display?: 'all' | 'selectedOnly';
 }
 
-const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout = 'grid' }) => {
+const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout = 'grid', display = 'all' }) => {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const toggleSelect = (id: string) => {
@@ -54,7 +55,9 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
   }, [draggedItemId, images, setImages]);
 
 
-  if (images.length === 0 && layout === 'grid') {
+  const imagesToRender = display === 'selectedOnly' ? images.filter(img => img.selected) : images;
+
+  if (imagesToRender.length === 0 && layout === 'grid') {
     return (
       <div className="text-center py-10 bg-white rounded-lg shadow-md">
         <p className="text-slate-500">Your captured photos will appear here.</p>
@@ -63,7 +66,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
     );
   }
   
-  const imageElements = images.map(image => (
+  const imageElements = imagesToRender.map(image => (
       <div
         key={image.id}
         draggable
@@ -96,6 +99,7 @@ const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, setImages, layout =
   ));
 
   if (layout === 'row') {
+    if (imagesToRender.length === 0) return null;
     return (
         <div className="flex gap-2 overflow-x-auto pb-2">
             {imageElements}

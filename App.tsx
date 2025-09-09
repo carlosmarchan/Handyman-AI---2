@@ -7,6 +7,7 @@ import Dictation from './components/Dictation';
 import ReportGenerator from './components/ReportGenerator';
 import { generateInitialReport } from './services/geminiService';
 import { ArrowRightIcon } from './components/icons/ArrowRightIcon';
+import ReportPreview from './components/ReportPreview';
 
 const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>(AppStage.CAPTURE);
@@ -60,28 +61,22 @@ const App: React.FC = () => {
     setChatHistory([]);
   };
 
-  const selectedImageCount = images.filter(img => img.selected).length;
+  const handleGoToPreview = () => {
+    setStage(AppStage.PREVIEW);
+  };
+  
+  const handleReturnToRefine = () => {
+    setStage(AppStage.REFINE);
+  };
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <header className="bg-white shadow-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-700">
-            Handy<span className="text-blue-600">AI</span> Report
-          </h1>
-          {stage === AppStage.REFINE && (
-            <button
-              onClick={resetApp}
-              className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
-            >
-              Start New Report
-            </button>
-          )}
-        </div>
-      </header>
+  const selectedImages = images.filter(img => img.selected);
+  const aiMessages = chatHistory.filter(m => m.author === 'ai');
+  const latestReport = aiMessages.length > 0 ? aiMessages[aiMessages.length - 1].content : report;
 
-      <main className="container mx-auto p-4 md:p-6">
-        {stage === AppStage.CAPTURE && (
+  const renderContent = () => {
+    switch (stage) {
+      case AppStage.CAPTURE:
+        return (
           <div className="space-y-8">
             <div>
                 <h2 className="text-2xl font-semibold mb-2 text-slate-700">Step 1: Capture Your Work</h2>
@@ -100,27 +95,65 @@ const App: React.FC = () => {
             <div className="mt-8 pt-6 border-t border-slate-200 flex justify-center">
               <button
                 onClick={handleGenerateReport}
-                disabled={selectedImageCount === 0}
+                disabled={selectedImages.length === 0}
                 className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all transform hover:scale-105"
               >
-                <span>Generate Report ({selectedImageCount} {selectedImageCount === 1 ? 'photo' : 'photos'} selected)</span>
+                <span>Generate Report ({selectedImages.length} {selectedImages.length === 1 ? 'photo' : 'photos'} selected)</span>
                 <ArrowRightIcon />
               </button>
             </div>
           </div>
-        )}
-        {(stage === AppStage.GENERATING || stage === AppStage.REFINE) && (
+        );
+      case AppStage.GENERATING:
+      case AppStage.REFINE:
+        return (
             <ReportGenerator 
-                isLoading={isLoading} 
+                isLoading={stage === AppStage.GENERATING} 
                 report={report} 
                 chatHistory={chatHistory} 
                 setChatHistory={setChatHistory}
-                initialImages={images.filter(img => img.selected)}
+                images={images}
+                setImages={setImages}
                 initialNotes={dictatedText}
+                onGoToPreview={handleGoToPreview}
             />
-        )}
+        );
+      case AppStage.PREVIEW:
+        return (
+          <ReportPreview
+            reportMarkdown={latestReport}
+            images={selectedImages}
+            onBackToRefine={handleReturnToRefine}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      <header className="bg-white shadow-md sticky top-0 z-10 print-hidden">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-700">
+            Handy<span className="text-blue-600">AI</span> Report
+          </h1>
+          {(stage === AppStage.REFINE || stage === AppStage.PREVIEW) && (
+            <button
+              onClick={resetApp}
+              className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+            >
+              Start New Report
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="container mx-auto p-4 md:p-6">
+        {renderContent()}
       </main>
-       <footer className="text-center p-4 text-sm text-slate-400">
+
+       <footer className="text-center p-4 text-sm text-slate-400 print-hidden">
         <p>&copy; {new Date().getFullYear()} HandyAI Report. All rights reserved.</p>
       </footer>
     </div>

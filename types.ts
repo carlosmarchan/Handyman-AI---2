@@ -2,6 +2,7 @@ export enum AppStage {
   CAPTURE = 'CAPTURE',
   GENERATING = 'GENERATING',
   REFINE = 'REFINE',
+  PREVIEW = 'PREVIEW',
 }
 
 export interface ImageFile {

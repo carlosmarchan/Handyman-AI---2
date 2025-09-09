@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, ImageFile } from '../types';
 import { refineReport, initializeChat } from '../services/geminiService';
@@ -13,22 +14,25 @@ interface ReportGeneratorProps {
   report: string;
   chatHistory: ChatMessage[];
   setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  initialImages: ImageFile[];
+  images: ImageFile[];
+  setImages: React.Dispatch<React.SetStateAction<ImageFile[]>>;
   initialNotes: string;
+  onGoToPreview: () => void;
 }
 
-const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, chatHistory, setChatHistory, initialImages, initialNotes }) => {
+const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, chatHistory, setChatHistory, images, setImages, initialNotes, onGoToPreview }) => {
   const [userInput, setUserInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
-  const [evidenceImages, setEvidenceImages] = useState<ImageFile[]>(initialImages);
   const chatSessionRef = useRef<Chat | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     if(report && !chatSessionRef.current) {
-        chatSessionRef.current = initializeChat(initialImages, initialNotes, report);
+        // Initialize chat with only the currently selected images
+        const selectedImages = images.filter(img => img.selected);
+        chatSessionRef.current = initializeChat(selectedImages, initialNotes, report);
     }
-  }, [report, initialImages, initialNotes]);
+  }, [report, images, initialNotes]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -90,9 +94,17 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
 
   return (
     <div className="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col h-[calc(100vh-200px)]">
-        <div className="p-6 border-b border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-800">Step 3: Review and Refine Your Report</h2>
-            <p className="text-slate-500 mt-1">Here is the draft of your report. Ask for changes below, and the AI will edit it directly.</p>
+        <div className="p-6 border-b border-slate-200 flex justify-between items-start">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-800">Step 3: Review and Refine Your Report</h2>
+                <p className="text-slate-500 mt-1">Here is the draft of your report. Ask for changes below, and the AI will edit it directly.</p>
+            </div>
+            <button
+              onClick={onGoToPreview}
+              className="ml-4 flex-shrink-0 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+            >
+              Preview & Finalize
+            </button>
         </div>
         
         {/* Main content area with report and user prompts */}
@@ -143,12 +155,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
         {/* Input Area */}
         <div className="p-4 bg-white border-t border-slate-200">
             {/* Evidence Tray */}
-            {evidenceImages.length > 0 && (
-                <div className="mb-3">
-                    <p className="text-xs text-slate-500 mb-2">Evidence Tray (Drag to reorder, click to select, or mention in your chat)</p>
-                    <PhotoGallery images={evidenceImages} setImages={setEvidenceImages} layout="row" />
-                </div>
-            )}
+            <div className="mb-3">
+                <p className="text-xs text-slate-500 mb-2">Evidence Tray (Drag to reorder, click to select/deselect)</p>
+                <PhotoGallery images={images} setImages={setImages} layout="row" display="selectedOnly" />
+            </div>
 
             <div className="flex gap-2">
                 <input
