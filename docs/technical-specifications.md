@@ -51,7 +51,7 @@ This approach creates a cohesive "session" for the user. Although the data is lo
 4.  **`AppStage.PREVIEW`**:
     - **State:** `report` (via `latestReport` derived from `chatHistory`), `images`.
     - **Components:** `ReportPreview`.
-    - **Logic:** The final, read-only view of the report. It uses `html2canvas` and `jspdf` to capture the rendered HTML and generate a PDF.
+    - **Logic:** The final, read-only view of the report. It now includes UI controls for the user to select a 1, 2, or 3-column layout for the supporting photos. This layout choice is reflected in real-time in the preview and is used when generating the PDF via `html2canvas` and `jspdf`.
 
 ## 4. Component Architecture
 
@@ -59,8 +59,8 @@ This approach creates a cohesive "session" for the user. Although the data is lo
 - **`CameraCapture.tsx`**: Handles camera access via `mediaDevices.getUserMedia` and file input for uploading images.
 - **`PhotoGallery.tsx`**: Displays captured/uploaded images. Allows for selection, deletion, and reordering (via drag-and-drop).
 - **`Dictation.tsx`**: Uses the browser's `SpeechRecognition` API for voice-to-text.
-- **`ReportGenerator.tsx`**: The most complex component. It displays the AI-generated report, manages the chat-based refinement loop, handles the "Evidence Tray" (including initiating annotations and adding more photos), and displays dynamic AI prompt suggestions.
-- **`ReportPreview.tsx`**: Renders the final, client-facing report layout and includes the "Save as PDF" functionality.
+- **`ReportGenerator.tsx`**: The most complex component. It displays the AI-generated report, manages the chat-based refinement loop, handles the "Evidence Tray" (including initiating annotations and adding more photos), and displays dynamic AI prompt suggestions. It utilizes `ReactMarkdown` with a custom, type-safe paragraph renderer to enable features like highlighting newly added text.
+- **`ReportPreview.tsx`**: Renders the final, client-facing report layout. It now manages the visual layout of supporting photos, allowing the user to switch between 1, 2, and 3-column grids via a tabbed interface. It includes the "Save as PDF" functionality, which captures the currently selected photo layout. Component props are strictly typed to ensure correctness.
 - **`ImageAnnotationModal.tsx`**: A modal for the image annotation workflow. It orchestrates the AI analysis and image editing process.
 - **`/components/icons`**: A collection of simple, reusable SVG icon components.
 - **`/services/geminiService.ts`**: A dedicated module for all interactions with the Google Gemini API.
@@ -102,20 +102,28 @@ This service is the AI brain of the application. It abstracts all API calls.
 - **Advanced Offline Capabilities:** While the app can be used after loading, implementing a Service Worker would provide true offline functionality. This would allow the app to be launched without a connection and could queue API-dependent actions (like report generation) to be executed once connectivity is restored.
 - **Accessibility (A11y) Audit:** A thorough review to ensure the application is fully accessible, including comprehensive keyboard navigation, ARIA attribute usage for dynamic content (like loading states and AI suggestions), and screen reader compatibility.
 
-## 7. Error Handling and Resilience
-
-The application is designed with user-facing error handling to guide the user when things go wrong.
-
-- **Component-Level State:** Components that can fail independently (e.g., `CameraCapture`, `Dictation`) manage their own error states. This prevents a localized error, like the camera failing to start, from crashing the entire application.
-- **API Service Errors:** The `geminiService.ts` file wraps all API calls in `try...catch` blocks. When a call to the Gemini API fails, it logs the technical error to the console and throws a new, user-friendly `Error`. This allows the calling component to catch the error and display a clear message to the user (e.g., "The AI failed to generate a report. Please try again.").
-- **Visual Feedback:** Errors are communicated to the user through dedicated UI elements, such as the red error banner in the initial capture stage or specific error messages within the Image Annotation modal. This ensures the user is never left wondering why an action failed.
-
-## 8. Performance and Optimization
-
-Performance is a key consideration, especially for a mobile-first, in-browser application.
+## 7. Performance and Optimization
 
 - **Image Handling:** Images are handled as Base64 data URLs. This simplifies state management as the image data is self-contained and can be easily passed between components and to the API. The trade-off is that Base64 strings are larger than their binary counterparts.
 - **Client-Side Processing:** All logic, including AI interactions and PDF generation, is handled on the client. This makes the application highly responsive as it doesn't rely on a backend for business logic processing.
 - **Future Optimizations:**
     - **Image Compression:** Before being sent to the Gemini API, images could be compressed on the client side using a library like `browser-image-compression`. This would significantly reduce payload size, leading to faster API responses, lower costs, and better performance on slow networks.
     - **Memoization:** For more complex UI sections, `React.memo` or the `useMemo` hook could be used to prevent unnecessary re-renders, particularly during the refinement stage where the report text is updated frequently.
+
+## 8. Code Quality and Maintenance
+
+### 8.1. Type Safety and Refactoring
+
+The application is built with TypeScript to ensure a robust and maintainable codebase. A focus is placed on strong typing to prevent common runtime errors and improve developer experience.
+
+Recent refactoring efforts include:
+- **Strict Component Props:** All React components, such as `ReportPreview`, have their props explicitly typed using interfaces (e.g., `React.FC<ReportPreviewProps>`). This replaced default untyped props, resolving type errors during integration.
+- **Type-Safe Renderers:** Custom renderers used with `react-markdown` (e.g., in `ReportGenerator.tsx`) are carefully typed. A previous implementation using `any` was refactored to correctly handle props, which simultaneously fixed a rendering bug where paragraph content was disappearing and resolved a critical TypeScript error.
+
+### 8.2. Error Handling and Resilience
+
+The application is designed with user-facing error handling to guide the user when things go wrong.
+
+- **Component-Level State:** Components that can fail independently (e.g., `CameraCapture`, `Dictation`) manage their own error states. This prevents a localized error, like the camera failing to start, from crashing the entire application.
+- **API Service Errors:** The `geminiService.ts` file wraps all API calls in `try...catch` blocks. When a call to the Gemini API fails, it logs the technical error to the console and throws a new, user-friendly `Error`. This allows the calling component to catch the error and display a clear message to the user (e.g., "The AI failed to generate a report. Please try again.").
+- **Visual Feedback:** Errors are communicated to the user through dedicated UI elements, such as the red error banner in the initial capture stage or specific error messages within the Image Annotation modal. This ensures the user is never left wondering why an action failed.

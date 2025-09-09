@@ -243,12 +243,14 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
           
           // Helper to recursively get all text from children nodes
           const childrenToText = (children: React.ReactNode): string => {
-              return React.Children.toArray(children).reduce((text: string, child: React.ReactNode) => {
-                  if (typeof child === 'string') {
+              // FIX: This function was updated to correctly handle number types and to add stronger type
+              // checking for child props to prevent runtime errors when traversing the React node tree.
+              return React.Children.toArray(children).reduce((text: string, child: React.ReactNode): string => {
+                  if (typeof child === 'string' || typeof child === 'number') {
                       return text + child;
                   }
-                  if (React.isValidElement(child) && child.props && 'children' in child.props) {
-                       return text + childrenToText(child.props.children);
+                  if (React.isValidElement(child) && child.props && typeof child.props === 'object' && 'children' in child.props) {
+                       return text + childrenToText(child.props.children as React.ReactNode);
                   }
                   return text;
               }, '');
