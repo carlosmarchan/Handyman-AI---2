@@ -232,39 +232,37 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
   }
 
   const customRenderers = {
-      // FIX: Destructure non-standard props `node` and `inline` to avoid passing them to the DOM element.
-      // This prevents potential React warnings and resolves a TypeScript type inference issue.
-      p: ({ node, inline, ...props }: any) => {
+      // FIX: The original `p` renderer had multiple issues: it used `any` for props which caused type errors,
+      // passed invalid props to the DOM, and failed to render its children. This implementation fixes those issues.
+      p: (props: { node?: any; inline?: boolean; children?: React.ReactNode;[key: string]: any; }) => {
+          const { node, inline, children, ...rest } = props;
           // Do not highlight if there's nothing to highlight, or if it has already been applied in this render pass.
           if (!highlightedText || highlightAppliedRef.current) {
-              return <p {...props} />;
+              return <p {...rest}>{children}</p>;
           }
           
           // Helper to recursively get all text from children nodes
-          // FIX: The original reduce function with `any` was causing faulty type inference.
-          // This implementation is more type-safe and explicitly handles different child types,
-          // ensuring a string is always returned and resolving the TypeScript error.
           const childrenToText = (children: React.ReactNode): string => {
               return React.Children.toArray(children).reduce((text: string, child: React.ReactNode) => {
                   if (typeof child === 'string') {
                       return text + child;
                   }
-                  if (React.isValidElement(child) && 'children' in child.props) {
+                  if (React.isValidElement(child) && child.props && 'children' in child.props) {
                        return text + childrenToText(child.props.children);
                   }
                   return text;
               }, '');
           };
 
-          const paragraphText = childrenToText(props.children);
+          const paragraphText = childrenToText(children);
 
           // If the paragraph includes the new sentence, apply the highlight and ref
           if (paragraphText.includes(highlightedText)) {
               highlightAppliedRef.current = true; // Mark as applied to prevent multiple highlights
-              return <p {...props} ref={highlightRef} className="highlight-fade" />;
+              return <p {...rest} ref={highlightRef} className="highlight-fade">{children}</p>;
           }
           
-          return <p {...props} />;
+          return <p {...rest}>{children}</p>;
       }
   };
 

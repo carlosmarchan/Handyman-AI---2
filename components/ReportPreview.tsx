@@ -16,8 +16,10 @@ interface ReportPreviewProps {
 declare const html2canvas: any;
 declare const jspdf: any;
 
+// Fix: Specify the props type for the functional component to resolve type errors.
 const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, onBackToRefine }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [photoLayout, setPhotoLayout] = useState<'1-col' | '2-col' | '3-col'>('1-col');
 
   const handleSaveAsPdf = async () => {
     const reportElement = document.getElementById('report-content');
@@ -80,14 +82,39 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, o
     }
   };
 
+  const layoutClasses = {
+    '1-col': 'grid-cols-1',
+    '2-col': 'grid-cols-2',
+    '3-col': 'grid-cols-3',
+  };
+
 
   return (
     <div className="bg-white rounded-lg shadow-xl overflow-hidden">
       {/* Toolbar */}
-      <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 print-hidden">
+      <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-4 print-hidden">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Step 4: Final Report Preview</h2>
-          <p className="text-sm text-slate-500">This is how your client will see the report. Print or save as PDF.</p>
+          <p className="text-sm text-slate-500">Choose a photo layout, then print or save as PDF.</p>
+           {/* Layout Tabs */}
+           <div className="mt-3 flex items-center border border-slate-300 rounded-lg p-0.5 bg-slate-200 w-fit text-sm font-medium">
+            {(['1-col', '2-col', '3-col'] as const).map(layout => {
+              const text = `${layout.split('-')[0]} Column Photos`;
+              return (
+                <button
+                  key={layout}
+                  onClick={() => setPhotoLayout(layout)}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    photoLayout === layout
+                      ? 'bg-white shadow-sm text-blue-600'
+                      : 'bg-transparent text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {text}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -138,11 +165,10 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ reportMarkdown, images, o
         {images.length > 0 && (
           <section className="mt-12 pt-8 border-t border-slate-200">
             <h3 className="text-2xl font-semibold text-slate-700 mb-6">Supporting Photos</h3>
-            <div className="grid grid-cols-1 gap-6 break-inside-avoid">
+            <div className={`grid ${layoutClasses[photoLayout]} gap-6`}>
               {images.map(image => (
-                <div key={image.id} className="rounded-lg overflow-hidden border border-slate-200 break-inside-avoid mb-6">
+                <div key={image.id} className="rounded-lg overflow-hidden border border-slate-200 break-inside-avoid">
                   <img src={image.annotatedSrc || image.src} alt="Evidence of work completed" className="w-full h-auto object-cover" />
-                  {/* Placeholder for future caption functionality */}
                 </div>
               ))}
             </div>
