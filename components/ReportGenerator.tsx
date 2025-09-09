@@ -241,10 +241,17 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
           }
           
           // Helper to recursively get all text from children nodes
+          // FIX: The original reduce function with `any` was causing faulty type inference.
+          // This implementation is more type-safe and explicitly handles different child types,
+          // ensuring a string is always returned and resolving the TypeScript error.
           const childrenToText = (children: React.ReactNode): string => {
-              return React.Children.toArray(children).reduce((text: string, child: any) => {
-                  if (typeof child === 'string') return text + child;
-                  if (child?.props?.children) return text + childrenToText(child.props.children);
+              return React.Children.toArray(children).reduce((text: string, child: React.ReactNode) => {
+                  if (typeof child === 'string') {
+                      return text + child;
+                  }
+                  if (React.isValidElement(child) && 'children' in child.props) {
+                       return text + childrenToText(child.props.children);
+                  }
                   return text;
               }, '');
           };
