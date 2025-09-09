@@ -4,6 +4,7 @@ import { ChatMessage, ImageFile } from '../types';
 import { refineReport, initializeChat } from '../services/geminiService';
 import Loader from './Loader';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
+import { MicrophoneIcon } from './icons/MicrophoneIcon';
 import type { Chat } from '@google/genai';
 import ReactMarkdown from 'https://esm.sh/react-markdown@9';
 import remarkGfm from 'https://esm.sh/remark-gfm@4';
@@ -20,11 +21,51 @@ interface ReportGeneratorProps {
   onGoToPreview: () => void;
 }
 
+// Check for browser support outside component to avoid re-declaration
+const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+const isSpeechRecognitionSupported = !!SpeechRecognition;
+
 const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, chatHistory, setChatHistory, images, setImages, initialNotes, onGoToPreview }) => {
   const [userInput, setUserInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
   const chatSessionRef = useRef<Chat | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any | null>(null);
+
+  useEffect(() => {
+    if (!isSpeechRecognitionSupported) {
+      console.warn("Speech recognition not supported by this browser.");
+      return;
+    }
+    
+    recognitionRef.current = new SpeechRecognition();
+    const recognition = recognitionRef.current;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      setUserInput(prev => (prev ? prev.trim() + ' ' : '') + text);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsDictating(false);
+    };
+    
+    recognition.onend = () => {
+        setIsDictating(false);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
   
   useEffect(() => {
     if(report && !chatSessionRef.current) {
@@ -75,6 +116,17 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
       setChatHistory(prev => [...prev, errorMessage]);
     } finally {
       setIsRefining(false);
+    }
+  };
+
+  const handleDictateClick = () => {
+    if (!recognitionRef.current || !isSpeechRecognitionSupported) return;
+
+    if (isDictating) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+      setIsDictating(true);
     }
   };
   
@@ -170,6 +222,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isLoading, report, ch
                     className="flex-grow p-3 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     disabled={isRefining}
                 />
+                {isSpeechRecognitionSupported && (
+                    <button
+                        onClick={handleDictateClick}
+                        disabled={isRefining}
+                        title={isDictating ? "Stop dictation" : "Start dictation"}
+                        className={`p-3 text-white rounded-lg transition-colors disabled:bg-slate-400 ${isDictating ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-slate-500 hover:bg-slate-600'}`}
+                    >
+                        <MicrophoneIcon />
+                    </button>
+                )}
                 <button
                     onClick={handleRefine}
                     disabled={isRefining || !userInput.trim()}
