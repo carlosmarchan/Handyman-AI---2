@@ -1,0 +1,19 @@
+export enum AppStage {
+  CAPTURE = 'CAPTURE',
+  GENERATING = 'GENERATING',
+  REFINE = 'REFINE',
+}
+
+export interface ImageFile {
+  id: string;
+  src: string; // base64 data URL
+  mimeType: string;
+  selected: boolean;
+}
+
+export interface ChatMessage {
+    author: 'user' | 'ai';
+    content: string;
+    // Optional array of images for AI messages to embed in the report
+    images?: ImageFile[]; 
+}

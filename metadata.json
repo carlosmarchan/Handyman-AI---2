@@ -1,0 +1,8 @@
+{
+  "name": "Handyman AI - 2",
+  "description": "An application for handymen to capture photos of completed work, use voice dictation for notes, and leverage AI to generate professional client-facing reports.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

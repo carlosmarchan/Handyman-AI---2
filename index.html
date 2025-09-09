@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Handyman AI Report Generator</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      // The typography plugin is now loaded via the script tag's URL parameters.
+      // The old config with `require` was breaking script execution.
+      tailwind.config = {}
+    </script>
+    <style>
+      /* Custom styles to fix markdown table rendering */
+      .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1.25em;
+        margin-bottom: 1.25em;
+        table-layout: auto;
+      }
+      .prose thead {
+        border-bottom-width: 2px;
+        border-bottom-color: #e2e8f0; /* slate-200 */
+      }
+      .prose th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #334155; /* slate-700 */
+      }
+      .prose tbody tr {
+        border-bottom-width: 1px;
+        border-bottom-color: #f1f5f9; /* slate-100 */
+      }
+      .prose tbody tr:last-child {
+        border-bottom-width: 0;
+      }
+      .prose td {
+        padding: 0.75rem 1rem;
+        vertical-align: top;
+        color: #334155; /* slate-700 */
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "react-markdown": "https://esm.sh/react-markdown@9?deps=react@19",
+    "remark-gfm": "https://esm.sh/remark-gfm@4?deps=react@19"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
